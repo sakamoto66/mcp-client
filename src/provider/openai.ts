@@ -15,9 +15,17 @@ export async function promptOpenAI(config: AiAgentConfig, mcpManager: MCPClientM
     const openai = new OpenAI({
         apiKey: config.llm.api_key,
         baseURL: config.llm.base_url,
+        defaultHeaders: config.llm.default_headers,
     });
-    // OpenAI.Chat.Completions.ChatCompletionMessage
+    
+    //
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
+    if(config.systemPrompt) {
+        messages.push({
+            role: 'assistant',
+            content: config.systemPrompt,
+        });
+    }
     messages.push({
         role: 'user',
         content: userQuestion,
@@ -39,11 +47,12 @@ export async function promptOpenAI(config: AiAgentConfig, mcpManager: MCPClientM
         // 受信したメッセージを表示
         console.log(response.choices.map((a) => a.message.content).join("\n"))
 
-        // ツールの使用を確認する (OpenAIではツール使用のロジックをカスタムで実装する必要があります)
+        // ツールの使用を確認する
         const tool_uses = extractToolUses(response);
         for (const tool_use of tool_uses) {
             try {
                 const params:any = JSON.parse(tool_use.function.arguments);
+                console.log(`Tool Use: ${tool_use.function.name}`, params);
                 const result = await mcpManager.callTool(tool_use.function.name, params);
                 console.log(`Tool Result: ${result}`);
                 const tool_result = convert_tool_result_to_message(tool_use, result);
