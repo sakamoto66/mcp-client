@@ -6,6 +6,7 @@ export type AiAgentConfig = {
         api_key?: string,
         temperature?: number
         base_url? : string
+        default_headers?: any
     },
 
     mcpServers: Record<string, {

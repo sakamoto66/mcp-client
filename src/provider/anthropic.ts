@@ -12,12 +12,11 @@ export async function promptAnthropic(config: AiAgentConfig, mcpManager:MCPClien
     // ツール取得
     const tools = mcpManager.allTools.map(convert_toolschema);
 
-    const anthropicClient = new Anthropic(
-        {
-            apiKey: config.llm.api_key,
-            baseURL: config.llm.base_url
-        }
-    );
+    const anthropicClient = new Anthropic({
+        apiKey: config.llm.api_key,
+        baseURL: config.llm.base_url,
+        defaultHeaders: config.llm.default_headers,
+    });
 
     const messages: Anthropic.MessageParam[] = [];
     messages.push({
