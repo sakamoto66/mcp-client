@@ -64,7 +64,7 @@ export async function promptOpenAI(config: AiAgentConfig, mcpManager: MCPClientM
             }
         }
 
-        if (response.choices[0].finish_reason !== 'length') {
+        if (response.choices[0].finish_reason === 'stop') {
             break;
         }
     }
