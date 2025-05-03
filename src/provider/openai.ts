@@ -45,14 +45,14 @@ export async function promptOpenAI(config: AiAgentConfig, mcpManager: MCPClientM
         messages.push(...response.choices.map((a) => a.message));
 
         // 受信したメッセージを表示
-        console.log(response.choices.map((a) => a.message.content).join("\n"))
+        process.stdout.write(response.choices.map((a) => a.message.content).join(""))
 
         // ツールの使用を確認する
-        const tool_uses = extractToolUses(response);
+        const tool_uses = response.choices[0].message.tool_calls || [];
         for (const tool_use of tool_uses) {
+            console.log(`Tool Use: ${tool_use.function.name}`, tool_use.function.arguments);
             try {
                 const params:any = JSON.parse(tool_use.function.arguments);
-                console.log(`Tool Use: ${tool_use.function.name}`, params);
                 const result = await mcpManager.callTool(tool_use.function.name, params);
                 console.log(`Tool Result: ${result}`);
                 const tool_result = convert_tool_result_to_message(tool_use, result);
@@ -68,6 +68,8 @@ export async function promptOpenAI(config: AiAgentConfig, mcpManager: MCPClientM
             break;
         }
     }
+    process.stdout.write("\n");
+    console.log("Prompt finished.");
 }
 
 /**
@@ -91,24 +93,52 @@ function convert_tool_result_to_message(tool_use: OpenAI.Chat.Completions.ChatCo
  * @returns 
  */
 function convert_toolschema(tool: ToolSchema):OpenAI.Chat.Completions.ChatCompletionTool {
+    convert_strict_format(tool.inputSchema);
     return {
         type: 'function',
         function: {
             name: tool.name,
             description: tool.description,
             parameters: tool.inputSchema,
+            strict: true,
         },
     }
 }
 
 /**
- * メッセージからツール使用を抽出
- * @param content 
- * @param tools 
- * @returns 
+ * OpenAIのstrictな形式に変換する
+ * "additionalProperties": falseの場合
+ * "required"にpropertiesの項目すべて列挙する必要がある
+ * オプションにしたい場合、項目のtypeを"null"にする必要がある
+ * @param obj 
  */
-function extractToolUses(response: OpenAI.Chat.Completions.ChatCompletion):OpenAI.Chat.Completions.ChatCompletionMessageToolCall[] {
-    const tool_uses = response.choices.map(({message}) => message.tool_calls).filter((tool_calls) => tool_calls).flat()
-    // @ts-expect-error
-    return tool_uses;
+const convert_strict_format = (obj:any) => {
+    if(!obj) return;
+    if (obj.type === 'array') {
+        if(obj.items) {
+            convert_strict_format(obj.items);
+        }
+    }
+    if (obj.type === 'object' && obj.properties) {
+        if(!('additionalProperties' in obj)) {
+            obj.additionalProperties = false;
+        }
+        for(const [k,v] of Object.entries(obj.properties)) {
+            convert_strict_format(v);
+            if(!obj.required.includes(k) && v && typeof v === 'object' && 'type' in v) {
+                if(Array.isArray(v.type)) {
+                    if(!v.type.includes('null')) {
+                        v.type.push('null');
+                        obj.required.push(k);
+                    }
+                } else if(v.type !== 'null') {
+                    v.type = [v.type, 'null'];
+                    obj.required.push(k);
+                }
+                if('default' in v) {
+                    delete v.default;
+                }
+            }
+        }
+    }
 }
