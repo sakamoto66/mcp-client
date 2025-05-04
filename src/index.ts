@@ -27,7 +27,16 @@ async function main(userQuestion: string, configPath: string = 'config.js') {
         await promptAnthropic(config, mcpServers, userQuestion);
     }
     if(config.llm.provider == 'openai') {
-        await promptOpenAI(config, mcpServers, userQuestion);
+        try {
+            await promptOpenAI(config, mcpServers, userQuestion);
+        } catch (e) {
+            if(`${e}`.includes('Invalid schema for function')) {
+                const m = /Invalid schema for function '(.+?)'/.exec(`${e}`);
+                const toolName = m ? m[1] : 'unknown';
+                console.error(`Error: Invalid schema for tool '${toolName}'. Please check the tool configuration.`);
+            }
+            throw e;
+        }
     }
 
     await mcpServers.close();

@@ -93,14 +93,15 @@ function convert_tool_result_to_message(tool_use: OpenAI.Chat.Completions.ChatCo
  * @returns 
  */
 function convert_toolschema(tool: ToolSchema):OpenAI.Chat.Completions.ChatCompletionTool {
-    convert_strict_format(tool.inputSchema);
+    const is_struct = is_strict_format(tool.inputSchema)
+    console.log(`Tool: ${tool.name}`, is_struct);
     return {
         type: 'function',
         function: {
             name: tool.name,
             description: tool.description,
             parameters: tool.inputSchema,
-            strict: true,
+            strict: is_struct,
         },
     }
 }
@@ -112,20 +113,25 @@ function convert_toolschema(tool: ToolSchema):OpenAI.Chat.Completions.ChatComple
  * オプションにしたい場合、項目のtypeを"null"にする必要がある
  * @param obj 
  */
-const convert_strict_format = (obj:any) => {
-    if(!obj) return;
+const is_strict_format = (obj:any):boolean => {
+    if(!obj) return true;
     if (obj.type === 'array') {
         if(obj.items) {
-            convert_strict_format(obj.items);
+            return is_strict_format(obj.items);
         }
     }
     if (obj.type === 'object' && obj.properties) {
         if(!('additionalProperties' in obj)) {
-            obj.additionalProperties = false;
+            return false;
         }
         for(const [k,v] of Object.entries(obj.properties)) {
-            convert_strict_format(v);
-            if(!obj.required.includes(k) && v && typeof v === 'object' && 'type' in v) {
+            if(!is_strict_format(v)) {
+                return false;
+            };
+            if(!obj.required.includes(k)) {
+                return false;
+            }
+            /*if(v && typeof v === 'object' && 'type' in v) {
                 if(Array.isArray(v.type)) {
                     if(!v.type.includes('null')) {
                         v.type.push('null');
@@ -138,7 +144,8 @@ const convert_strict_format = (obj:any) => {
                 if('default' in v) {
                     delete v.default;
                 }
-            }
+            }*/
         }
     }
+    return true;
 }
