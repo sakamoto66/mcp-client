@@ -81,10 +81,10 @@
 graph TD
   User[ユーザー]
   Client[mcp-client]
-  Config[設定ファイル<br>(config.js)]
+  Config[設定ファイル]
   Env[環境変数/APIキー]
   Server[MCPサーバー]
-  Provider1[AIプロバイダー<br>(OpenAI, Anthropic等)]
+  Provider1[AIプロバイダー]
   Tool1[外部ツール群]
 
   User -->|リクエスト| Client
@@ -98,7 +98,6 @@ graph TD
   Server -->|レスポンス| Client
   Client -->|結果| User
 ```
-
 ---
 
 ご質問・ご提案は [CONTRIBUTING.md](./CONTRIBUTING.md) もご参照ください。
